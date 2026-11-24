@@ -29,6 +29,8 @@ export async function POST(req: Request) {
             data: bytes,
         });
 
+        const info = await parse.getInfo({ parsePageInfo: true});
+
         const result = await parse.getText();
         return Response.json({
             success: true,
@@ -36,8 +38,10 @@ export async function POST(req: Request) {
             data: {
                 fileName: file.name,
                 size: file.size,
+                pages: info.pages.length,
                 type: file.type,
-                extractedText: result.text.slice(0, 4000)
+                extractedText: result.text,
+                extractedTotalCharacters: result.text.length,
             }
         })
 

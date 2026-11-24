@@ -1,10 +1,8 @@
 import { ai } from "@/lib/gemini";
-// import { ai } from "@/lib/openai";
 
 export async function POST(request: Request) {
     try {
         const rawBody = await request.text();
-        // console.log("Raw request body:", rawBody);
 
         const body = JSON.parse(rawBody);
         const { text } = body;
@@ -51,6 +49,7 @@ A brief concluding summary.
 
 Adapt the structure to the document.
 Do not force irrelevant sections.`;
+
         const response = await ai.models.generateContent({
             model: "gemini-3.5-flash-lite",
             contents: text,
@@ -58,14 +57,18 @@ Do not force irrelevant sections.`;
                 systemInstruction: systemInstruction,
             }
         })
-        // const response = await ai.responses.create({
-        //     model: "gpt-5.4-mini",
-        //     instructions: prompt,
-        //     input: text,
-        // });
+
+        const interaction = await ai.models.countTokens({
+            model: "gemini-3.5-flash-lite",
+            contents: text,
+        });
+
+        const usageInfo = await ai.interactions.create({
+            model: "gemini-3.5-flash-lite",
+            input: text,
+        })
 
         const summary = response.text;
-        // const summary = response.output_text;
 
         if (!summary) {
             return new Response(JSON.stringify({ error: "Failed to generate summary." }), { status: 500 });
@@ -73,11 +76,17 @@ Do not force irrelevant sections.`;
 
         return Response.json({
             success: true,
-            summary
+            data: {
+                tokensUsed: interaction.totalTokens,
+                inputTokens: usageInfo.usage?.total_input_tokens,
+                outputTokens: usageInfo.usage?.total_output_tokens,
+                totalTokens: usageInfo.usage?.total_tokens,
+                summary,
+            }
         });
 
-    } catch (error) {
+    } catch (error: any) {
         console.error("Error generating summary:", error);
-        return new Response(JSON.stringify({ error: "Failed to generate summary." }), { status: 500 });
+        return Response.json({ error: error.message }, { status: 500 });
     }
 }

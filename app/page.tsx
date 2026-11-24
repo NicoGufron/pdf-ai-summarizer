@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import ReactMarkdown from "react-markdown";
 
 export default function Home() {
@@ -9,9 +9,13 @@ export default function Home() {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<string | null>(null);
+  const [result, setResult] = useState<PDFData | null>(null);
 
-  const [summarize, setSummarize] = useState<string | null>(null);
+  // const [summarize, setSummarize] = useState<string | null>(null);
+  const [summaryAIData, setSummaryAIData] = useState<GoogleGenAIData | null>(null);
+  
+  const [tokensUsed, setTokensUsed] = useState<number | null>(null);
+  const [generationTime, setGenerationTime] = useState<number | null>(null);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
 
@@ -26,7 +30,8 @@ export default function Home() {
     setLoading(true);
     setError(null);
     setResult(null);
-    setSummarize(null);
+    setSummaryAIData(null);
+    // setSummarize(null);
 
     try {
       const formData = new FormData();
@@ -38,30 +43,46 @@ export default function Home() {
       });
 
       const data = await response.json();
-      setResult(data.data.extractedText);
-      handleSummarize();
+      if (data.data) {
+        setResult(data.data);
+      }
 
     } catch (err) {
       setError("Failed to generate summary.");
     }
   }
 
+  useEffect(() => {
+    if (result) {
+      handleSummarize();
+    }
+  }, [result]);
+
   const handleSummarize = async () => {
     if (!result) return;
 
     try {
+      const startTime = performance.now();
       const summarizeResponse = await fetch("/api/summarize", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ text: result }),
+        body: JSON.stringify({ text: result.extractedText }),
       });
 
       const summarizeData = await summarizeResponse.json();
 
+      const endTime = performance.now();
+
+      setGenerationTime(
+        Number(((endTime - startTime) / 1000).toFixed(2))
+      );
+
       if (summarizeData.success) {
-        setSummarize(summarizeData.summary);
+        // setSummarize(summarizeData.summary);
+        setTokensUsed(summarizeData.tokensUsed);
+        setSummaryAIData(summarizeData.data);
       } else {
         setError("Failed to generate summary.");
       }
@@ -74,7 +95,7 @@ export default function Home() {
 
   return (
     <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black min-h-screen p-4">
-      <h1 className="text-2xl font-bold">AI PDF Summarizer</h1>
+      <h1 className="text-2xl font-bold">PDF AI Summarizer</h1>
       <p className="text-lg text-zinc-600 dark:text-zinc-400">
         Upload a PDF file to get a summary of its content.
       </p>
@@ -100,14 +121,28 @@ export default function Home() {
         <p className="text-sm text-red-600 mt-4">{error}</p>
       )}
 
-      {/* {result && (
-        <p className="text-sm text-green-700 mt-4">{result}</p>
-      )} */}
+      {result && (
+        <div className="mt-4 w-full max-w-2xl overflow-y-auto p-4 bg-white rounded shadow dark:bg-zinc-800 flex flex-col gap-2">
+          <h2 className="text-xl font-bold mb-2">PDF File Details</h2>
+          <p className="text-sm">File name: {result.fileName}</p>
+          <p className="text-sm">File size: {result.size} bytes</p>
+          <p className="text-sm">File type: {result.type}</p>
+          <p className="text-sm">Number of pages: {result.pages}</p>
+          <p className="text-sm">Total characters extracted: {result.extractedTotalCharacters}</p>
+        </div>
+      )}
 
-      {summarize && (
+      {summaryAIData && (
         <div className="mt-4 w-full max-w-2xl overflow-y-auto p-4 bg-white rounded shadow dark:bg-zinc-800">
           <h2 className="text-xl font-bold mb-2">Summary:</h2>
-          <ReactMarkdown>{summarize}</ReactMarkdown>
+          <div className="mb-2 border p-4">
+            <p className="text-sm text-white">Tokens used: {summaryAIData.tokensUsed}</p>
+            <p className="text-sm text-white">Input tokens: {summaryAIData.inputTokens}</p>
+            <p className="text-sm text-white">Output tokens: {summaryAIData.outputTokens}</p>
+            <p className="text-sm text-white">Total tokens: {summaryAIData.totalTokens}</p>
+            <p className="text-sm text-white">Summary generation time: {generationTime} seconds</p>
+          </div>
+          <ReactMarkdown>{summaryAIData.summary}</ReactMarkdown>
         </div>
       )}
     </div>
