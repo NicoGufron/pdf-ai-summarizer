@@ -1,3 +1,4 @@
+import { chunkText } from "@/lib/chunk-text";
 import { ai } from "@/lib/gemini";
 
 export async function POST(request: Request) {
@@ -6,6 +7,14 @@ export async function POST(request: Request) {
 
         const body = JSON.parse(rawBody);
         const { text } = body;
+
+        const chunks = chunkText(text);
+
+        console.log("Total chunks: ", chunks.length);
+
+        chunks.forEach((chunk, index) => {
+            console.log(`Chunk ${index + 1}: ${chunk.length} characters`);
+        })
 
         if (!text) {
             return new Response(JSON.stringify({ error: "No text provided." }), { status: 400 });

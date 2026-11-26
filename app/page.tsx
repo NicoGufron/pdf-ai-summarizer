@@ -136,7 +136,7 @@ export default function Home() {
         <div className="mt-4 w-full max-w-2xl overflow-y-auto p-4 bg-white rounded shadow dark:bg-zinc-800">
           <h2 className="text-xl font-bold mb-2">Summary:</h2>
           <div className="mb-2 border p-4">
-            <p className="text-sm text-white">Tokens used: {summaryAIData.tokensUsed}</p>
+            <p className="text-sm text-white">Prompt tokens used: {summaryAIData.tokensUsed}</p>
             <p className="text-sm text-white">Input tokens: {summaryAIData.inputTokens}</p>
             <p className="text-sm text-white">Output tokens: {summaryAIData.outputTokens}</p>
             <p className="text-sm text-white">Total tokens: {summaryAIData.totalTokens}</p>
